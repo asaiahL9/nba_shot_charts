@@ -1,0 +1,15 @@
+body html {
+    background: #000
+}
+#shot{
+    border-radius: 7px;
+    width: 85%;
+    max-width: 600px;
+  box-shadow: 3px 3px 3px black;
+  margin: 20px auto;
+  transition: .4s
+}
+#shot:hover {
+  border: white solid;
+  transform: scale(1.02);
+}

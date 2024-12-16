@@ -32,7 +32,7 @@ url = f'https://www.nba.com/stats/events?CFID=&CFPARAMS=&ContextMeasure=FGA&EndP
 irl = f'0https://www.nba.com/stats/events?CFID=&CFPARAMS=&ContextMeasure=FGA&EndPeriod=0&EndRange=31800&GameID=0022400350&PlayerID=203999&RangeType=0&Season=2024-25&SeasonType=Regular%20Season&StartPeriod=0&StartRange=0&TeamID=1610612743&flag=3&sct=plot&section=game'
 # response = requests.get(url)
 # soup = BeautifulSoup(response.content, 'html.parser')
-# with open('shot_chart.html', 'w') as f:
+# with open('page.html', 'w') as f:
 #   f.write(soup.prettify())
 # container = soup.find('div', class_="x1cy8zhl x9f619 x78zum5 xl56j7k x2lwn1j xeuugli x47corl")
 # list = soup.find_all('div', class_='x9f619 xjbqb8w x78zum5 x168nmei x13lgxp2 x5pf9jr xo71vjh x1n2onr6 x1plvlek xryxfnj x1iyjqo2 x2lwn1j xeuugli xdt5ytf xqjyukv x1qjc9v5 x1oa3qoh x1nhvcw1')
@@ -56,11 +56,11 @@ def get_data():
     driver.implicitly_wait(5)  # Wait up to 5 seconds for elements to appear
   # print(driver.title)
     render = driver.page_source
-    with open("shot_chart.html", 'w', encoding='utf-8') as f:
+    with open("page.html", 'w', encoding='utf-8') as f:
         f.write(render)
 
 def find_chart():
-    with open('shot_chart.html', 'r', encoding='utf-8') as f:
+    with open('page.html', 'r', encoding='utf-8') as f:
         html_content = f.read()
     page = html_content
     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
@@ -83,7 +83,7 @@ def get_shots():
     return shots
 
 def get_shot_chart():
-    with open('shot_chart.html', 'r', encoding='utf-8') as f:
+    with open('page.html', 'r', encoding='utf-8') as f:
         html_content = f.read()
     page = html_content
     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
