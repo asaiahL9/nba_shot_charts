@@ -19,6 +19,7 @@ from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from lxml import etree
 import lxml
+import xml.etree.ElementTree as ET
 import functools                                        # used to create a print function that flushes the buffer
 flushprint = functools.partial(print, flush=True)       # create a print function that flushes the buffer immediately
 
@@ -117,42 +118,26 @@ def add_buttons():
     # Parse the HTML with BeautifulSoup
     with open('shot_chart.svg', 'r', encoding='utf-8') as f:
         svg_content = f.read()
-    page = svg_content
-    soup = BeautifulSoup(svg_content, 'html.parser')
-    root = etree.fromstring(svg_content)
+    # Parse the XML data
+    tree = etree.fromstring(svg_content)
+    # Find all <g> elements with class="shot"
+    # shots = tree.xpath('//g[@class="shot"]')  # XPath to find <g> elements with class "shot"
+    # Find the <element> tags and add an attribute
+    for element in tree.xpath('//g[@class="shot"]'):  # Select all <element> nodes
+        element.set('id', 'shot')  # Add an attribute to each <element>
+    # Create the HTML structure and wrap the SVG
+    html = etree.Element('html')
+    body = etree.SubElement(html, 'body')
 
-    # Find all shot <g> elements
-    shots = root.xpath('//svg:g[@class="shot"]', namespaces={'svg': 'http://www.w3.org/2000/svg'})
+    # Append the SVG to the body
+    body.append(tree)
 
-    # Loop through each shot and add a button (this will just create a simple clickable rectangle for demonstration)
-    for shot in shots:
-        # Extract the position from the transform attribute of the <path> tag
-        transform = shot.xpath('.//svg:path/@transform', namespaces={'svg': 'http://www.w3.org/2000/svg'})[0]
-        # Example of extracting translate(x, y) from transform (for this example assume only translation is used)
-        translate_values = transform.split('(')[1].split(')')[0].split(',')
-        x = float(translate_values[0].strip())
-        y = float(translate_values[1].strip())
-        
-        # Create a button element at the same position
-        button = etree.Element('rect', {
-            'x': str(x - 10),  # Adjust x and y for button size
-            'y': str(y - 10),
-            'width': '100',
-            'height': '100',
-            'fill': 'rgba(0, 0, 0, 10)',
-            'stroke': 'rgba(0, 0, 0, 0.8)',
-            'stroke-width': '2',
-            'onclick': f"alert('Shot at {x},{y}')"
-        })
-        
-        # Append the button to the shot group (you can also use <button> or other elements)
-        shot.append(button)
+    with open("hlt.svg", 'w', encoding='utf-8') as f:
+        f.write(etree.tostring(tree,pretty_print=True).decode())
+    # Print the modified XML
+    print(etree.tostring(tree, pretty_print=True).decode())
 
-    # Convert back to a string and print the modified SVG content
-    modified_svg_content = etree.tostring(root, pretty_print=True).decode()
-    with open("shotbuttons.svg","w") as f:
-        f.write(modified_svg_content)
-    print(modified_svg_content)
+    
 
 if __name__ == "__main__":
 #   get_data()

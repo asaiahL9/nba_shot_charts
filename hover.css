@@ -1,0 +1,8 @@
+body html {
+    background: #000
+}
+#mySVG{
+    border-radius: 7px;
+    width: 85%;
+    max-width: 600px;
+}
