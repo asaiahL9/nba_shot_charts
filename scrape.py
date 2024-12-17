@@ -21,11 +21,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from pathlib import Path
-import pandas
+import pandas as pd
 # used to create a print function that flushes the buffer
 import functools     
 flushprint = functools.partial(print, flush=True)       # create a print function that flushes the buffer immediately
-fields = ['PLAYER_NAME', 'ACTION_TYPE', 'EVENT_TYPE', 'SHOT_TYPE', 'gi', 'VTM', 'HTM', 'gdate', 'PERIOD', 'SHOT_DISTANCE', 'TEAM_NAME']
+fields = ["PLAYER",	"PLAY TYPE", "MADE", "SHOT TYPE", "BOXSCORE", "VTM", "HTM",	"Game Date", "PERIOD", "TIME REMAINING", "SHOT DISTANCE (FT)", "TEAM"]
 player_id = '203999'
 team_id = '1610612743'
 game_id = '0022400350'
@@ -36,6 +36,26 @@ url = f'https://www.nba.com/stats/events?CFID=&CFPARAMS=&ContextMeasure=FGA&EndP
 
 print(url)
 chrome_options = Options()
+
+# def open_driver():
+#     #   print(url)
+#     # Set up the WebDriver (assuming you are using Chrome)
+#     #   print('here')
+#     # chrome_options.add_argument("--start-maximized")  # Start the browser maximized
+#     driver = webdriver.Chrome(options=chrome_options)
+
+#     # Navigate to Google's homepage
+#     driver.get(url)
+#     time.sleep(5)
+    
+
+#   # Wait for the results to load and display the title
+#     driver.implicitly_wait(5)  # Wait up to 5 seconds for elements to appear
+#   # print(driver.title)
+#     render = driver.page_source
+#     with open("shot_chart.html", 'w', encoding='utf-8') as f:
+#         f.write(render)
+
 def get_data():
     #   print(url)
     # Set up the WebDriver (assuming you are using Chrome)
@@ -64,79 +84,90 @@ def get_page():
     driver.get(url)
     # time.sleep(5)
     wait = WebDriverWait(driver, 10)
+    time.sleep(2)
     video_element = wait.until(EC.presence_of_element_located((By.TAG_NAME, "video")))
     print("Page is loaded, and the <video> element is available.")
   # Wait for the results to load and display the title
     # driver.implicitly_wait(20)  # Wait up to 5 seconds for elements to appear
   # print(driver.title)
     render = driver.page_source
-    with open("wait.html", 'w', encoding='utf-8') as f:
+    # soup = BeautifulSoup(render, 'html_parser')
+    shots, play_container = get_shots(render)
+    for play in play_container:
+        try:
+            # Find the <tr> element using its class and attribute
+            tr_element = driver.find_element(By.XPATH, '//tr[@class="EventsTable_row__Gs8B9" and @data-is-playing="true"]')
+
+            # Scroll to the element if it's not visible
+            # driver.execute_script("arguments[0].scrollIntoView(true);", tr_element)
+
+            # Click the element
+            tr_element.click()
+
+            print("Element clicked successfully!")
+
+        except Exception as e:
+            print(f"Error: {e}")
+        # time.sleep(1)
+        video_file = get_video(shots, play_container, render)
+        for shot in shots:
+            shot['video_file'] = video_file
+            print("video_file", video_file)
+        plays_df = shots_to_df(shots, video_file)
+
+    with open("page.html", 'w', encoding='utf-8') as f:
         f.write(render)
-    print("page received")
+    print(plays_df)
+    # print("page received")
 
-def get_fields():
-    with open('page.html', 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    page = html_content
+def get_shots(page):
+    shots = []
+    # with open('page.html', 'r', encoding='utf-8') as f:
+    #     html_content = f.read()
+    # page = html_content
     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
     play_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
     # print(shot_container)
     with open('shot_container2.html', 'w', encoding='utf-8') as f:
         f.write(str(play_container))
-    header_container = soup.find('tr', class_='Crom_headers__mzI_m')
-    th_tags = header_container.find_all('th')
-    # Get the 'field' attributes from the <th> tags
-    fields = [th.get('field') for th in th_tags if th.get('field')]
-    print(*[f"'{field}'" for field in fields], sep=', ')
-    return fields
-
-def get_plays():
-    with open('page.html', 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    page = html_content
-    soup = BeautifulSoup(page, 'html.parser') # #parsing html content
-    play_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
-    # print(shot_container)
-    with open('shot_container2.html', 'w', encoding='utf-8') as f:
-        f.write(str(play_container))
-    header_container = soup.find('tr', class_='Crom_headers__mzI_m')
-    th_tags = header_container.find_all('th')
-    # Get the 'field' attributes from the <th> tags
-    fields = [th.get('field') for th in th_tags if th.get('field')]
-    print(*[f"'{field}'" for field in fields], sep=', ')
-    # with open(f)
-    # print(header_container.text)
-    # for info in header_container:
-    #     headers = info.find_all('th')
-    # print(info)
-    # for header in headers:
-    #     print(header.text)
-    # for play in play_container:
-    #     play_attr = soup.find_all('td', class_='Crom_text__NpR1_')
-    #     print(play_attr[0].text, play_attr[1].text,play_attr[2].text)
-    #     # for attr in play_attr:
-    #     #     print(attr.text)
-    #     name = play.find('a', href=True).text
-    #     link = play.get('href')
     
-        # print(name, link, shot_type)
-    # print(str(shot_container))
-    # # for shot in shot_container:
-    # #     info = shot.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
+    for play in play_container:
+        play_attr = play.find_all('td', class_='Crom_text__NpR1_')
+        # print(play_attr)
+        link = play.find('a', href=True)
+        link = link.get('href')
+        play_text = ', '.join(td.get_text(strip=True) for td in play_attr)
+        # print(play_text)
+        play_details = [td.get_text(strip=True) for td in play_attr]
+        # print(play_details)
+        entry = dict(zip(fields, play_details))
+        shots.append(entry)
+    print(shots)
+    # df = pd.DataFrame(shots)
+    # df.to_csv('shots.csv', index=False)
+    return shots, play_container
 
-    #     # name = shot.find('h4')
-    #     # print(name.text)
-    #     # print(message.text, '\n')
+def shots_to_df(shots, video_file):
+    # shots, play_container = get_shots()
+    # video = get_video(shots, play_container)
+    df = pd.DataFrame(shots)
+    df['VIDEO_FILE'] = video_file
+    df.to_csv('shots2.csv')
+    return df
 
-def get_video():
-    with open('page.html', 'r', encoding='utf-8') as f:
-        html_content = f.read()
-    page = html_content
+def get_video(shots, play_container, page):
+    video_filename = ''
+    # get_page()
+    # with open('page.html', 'r', encoding='utf-8') as f:
+    #     html_content = f.read()
+    # page = html_content
     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
+    # for play in play_container:
     video_tag = soup.find('video')
     # response = requests.get(video_url, stream=True)
     # response.raise_for_status()
     video_url = video_tag.get('src')
+    print("video_url", video_url)
     # video_src = source_tag['src']
     # print('video: ', source_tag)
     # Download the video using requests
@@ -147,20 +178,97 @@ def get_video():
             response.raise_for_status()
 
             # Save the video to a file
-            video_filename = "video.mp4"
+            # video_filename = "video.mp4"
+            video_filename = "".join(str(value) for value in shots.values()) + ".mp4"
             with open(video_filename, "wb") as video_file:
                 for chunk in response.iter_content(chunk_size=1024):
                     video_file.write(chunk)
-            print(f"Video downloaded successfully as {video_filename}.")
+            print()
         except Exception as e:
-            print(f"Failed to download the video: {e}")
+            print()
     else:
         print("No source URL found for the video element.")
+        video_filename = "default_video.mp4"
+    return video_filename
 
 # def manage_files():
 
 
 if __name__ == "__main__":
-    get_plays()
+    get_page()
+    # get_shots()
     # get_page()
     # get_video()
+    # shots_to_df()
+
+
+
+
+
+
+# def get_video():
+#     with open('page.html', 'r', encoding='utf-8') as f:
+#         html_content = f.read()
+#     page = html_content
+#     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
+#     video_tag = soup.find('video')
+#     # response = requests.get(video_url, stream=True)
+#     # response.raise_for_status()
+#     video_url = video_tag.get('src')
+#     # video_src = source_tag['src']
+#     # print('video: ', source_tag)
+#     # Download the video using requests
+#     if video_url:
+#         print("Video URL:", video_url)
+#         try:
+#             response = requests.get(video_url, stream=True)
+#             response.raise_for_status()
+
+#             # Save the video to a file
+#             video_filename = "video.mp4"
+#             with open(video_filename, "wb") as video_file:
+#                 for chunk in response.iter_content(chunk_size=1024):
+#                     video_file.write(chunk)
+#             print(f"Video downloaded successfully as {video_filename}.")
+#         except Exception as e:
+#             print(f"Failed to download the video: {e}")
+#     else:
+#         print("No source URL found for the video element.")
+#     return
+
+# def get_plays():
+#     shots = []
+#     with open('page.html', 'r', encoding='utf-8') as f:
+#         html_content = f.read()
+#     page = html_content
+#     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
+#     play_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
+#     # print(shot_container)
+#     with open('shot_container2.html', 'w', encoding='utf-8') as f:
+#         f.write(str(play_container))
+    
+#     for play in play_container:
+#         play_attr = play.find_all('td', class_='Crom_text__NpR1_')
+#         # print(play_attr)
+#         link = play.find('a', href=True)
+#         link = link.get('href')
+#         play_text = ', '.join(td.get_text(strip=True) for td in play_attr)
+#         # print(play_text)
+#         play_details = [td.get_text(strip=True) for td in play_attr]
+#         entry = dict(zip(fields, play_details))
+#         shots.append(entry)
+#     # Print the list
+#         # print(play_details)
+#         # for attr in play_attr:
+#         # #     print(attr.text)
+#             # link = play.find('a', href=True)
+#             # link = link.get('href')
+#         #     print(play_attr[0].text, play_attr[1].text,play_attr[2].text, link)
+#         # print(name, link, shot_type)
+#     # print(str(shot_container))
+#     # # for shot in shot_container:
+#     # #     info = shot.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
+
+#     #     # name = shot.find('h4')
+#     #     # print(name.text)
+#     #     # print(message.text, '\n')
