@@ -20,10 +20,12 @@ from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from pathlib import Path
+import pandas
 # used to create a print function that flushes the buffer
 import functools     
 flushprint = functools.partial(print, flush=True)       # create a print function that flushes the buffer immediately
-
+fields = ['PLAYER_NAME', 'ACTION_TYPE', 'EVENT_TYPE', 'SHOT_TYPE', 'gi', 'VTM', 'HTM', 'gdate', 'PERIOD', 'SHOT_DISTANCE', 'TEAM_NAME']
 player_id = '203999'
 team_id = '1610612743'
 game_id = '0022400350'
@@ -72,17 +74,52 @@ def get_page():
         f.write(render)
     print("page received")
 
+def get_fields():
+    with open('page.html', 'r', encoding='utf-8') as f:
+        html_content = f.read()
+    page = html_content
+    soup = BeautifulSoup(page, 'html.parser') # #parsing html content
+    play_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
+    # print(shot_container)
+    with open('shot_container2.html', 'w', encoding='utf-8') as f:
+        f.write(str(play_container))
+    header_container = soup.find('tr', class_='Crom_headers__mzI_m')
+    th_tags = header_container.find_all('th')
+    # Get the 'field' attributes from the <th> tags
+    fields = [th.get('field') for th in th_tags if th.get('field')]
+    print(*[f"'{field}'" for field in fields], sep=', ')
+    return fields
+
 def get_plays():
     with open('page.html', 'r', encoding='utf-8') as f:
         html_content = f.read()
     page = html_content
     soup = BeautifulSoup(page, 'html.parser') # #parsing html content
-    shot_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
+    play_container = soup.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
     # print(shot_container)
     with open('shot_container2.html', 'w', encoding='utf-8') as f:
-        f.write(str(shot_container))
-    for shot in shot_container:
-        shot.find('a', href=True)['href']
+        f.write(str(play_container))
+    header_container = soup.find('tr', class_='Crom_headers__mzI_m')
+    th_tags = header_container.find_all('th')
+    # Get the 'field' attributes from the <th> tags
+    fields = [th.get('field') for th in th_tags if th.get('field')]
+    print(*[f"'{field}'" for field in fields], sep=', ')
+    # with open(f)
+    # print(header_container.text)
+    # for info in header_container:
+    #     headers = info.find_all('th')
+    # print(info)
+    # for header in headers:
+    #     print(header.text)
+    # for play in play_container:
+    #     play_attr = soup.find_all('td', class_='Crom_text__NpR1_')
+    #     print(play_attr[0].text, play_attr[1].text,play_attr[2].text)
+    #     # for attr in play_attr:
+    #     #     print(attr.text)
+    #     name = play.find('a', href=True).text
+    #     link = play.get('href')
+    
+        # print(name, link, shot_type)
     # print(str(shot_container))
     # # for shot in shot_container:
     # #     info = shot.find_all('tr', class_ = 'EventsTable_row__Gs8B9')
@@ -103,22 +140,27 @@ def get_video():
     # video_src = source_tag['src']
     # print('video: ', source_tag)
     # Download the video using requests
-    try:
-        response = requests.get(video_url, stream=True)
-        response.raise_for_status()
+    if video_url:
+        print("Video URL:", video_url)
+        try:
+            response = requests.get(video_url, stream=True)
+            response.raise_for_status()
 
-        # Save the video to a file
-        video_filename = "video.mp4"
-        with open(video_filename, "wb") as video_file:
-            for chunk in response.iter_content(chunk_size=1024):
-                video_file.write(chunk)
-        print(f"Video downloaded successfully as {video_filename}.")
-    except Exception as e:
-        print(f"Failed to download the video: {e}")
+            # Save the video to a file
+            video_filename = "video.mp4"
+            with open(video_filename, "wb") as video_file:
+                for chunk in response.iter_content(chunk_size=1024):
+                    video_file.write(chunk)
+            print(f"Video downloaded successfully as {video_filename}.")
+        except Exception as e:
+            print(f"Failed to download the video: {e}")
     else:
         print("No source URL found for the video element.")
 
+# def manage_files():
+
+
 if __name__ == "__main__":
-    # get_plays()
+    get_plays()
     # get_page()
-    get_video()
+    # get_video()
