@@ -29,7 +29,7 @@ import pandas as pd
 import functools     
 
 flushprint = functools.partial(print, flush=True)       # create a print function that flushes the buffer immediately
-fields = ["PLAYER",	"PLAY TYPE", "MADE", "SHOT TYPE", "BOXSCORE", "VTM", "HTM",	"Game Date", "PERIOD", "TIME REMAINING", "SHOT DISTANCE (FT)", "TEAM"]
+fields = ["SVG", "PLAYER",	"PLAY TYPE", "MADE", "SHOT TYPE", "BOXSCORE", "VTM", "HTM",	"Game Date", "PERIOD", "TIME REMAINING", "SHOT DISTANCE (FT)", "TEAM"]
 player_id = '203999'
 team_id = '1610612743'
 game_id = '0022400350'
@@ -67,6 +67,18 @@ cursor_script = """
         };
     }
 """
+
+replacements = {
+    " ": "_",      # Replace spaces with underscores
+    "@": "at",     # Replace "@" with "at"
+    ",": "",       # Remove commas
+    ":": "-",      # Replace colons with dashes
+    "✔": "",       # Remove special characters
+}
+
+def multiple_replace(text, repl_dict):
+    pattern = re.compile("|".join(map(re.escape, repl_dict.keys())))
+    return pattern.sub(lambda match: repl_dict[match.group(0)], text)
 
 # Function to move the cursor to a target element
 def move_cursor_to_element(driver, element):
@@ -112,41 +124,34 @@ def get_page():
     videos = []
     # Iterate through each row to extract its position
     with open("locations.txt", 'w') as f:
-        for index, play in enumerate(plays, start=1):
+        for index, play in enumerate(plays):
             # location = play.location
             # size = play.size
             
             # f.write(str(location) + " | " + str(size) + '\n')
-            try:
-                # handle_popups(driver)
-                # hide_banners(driver)
-                # close_elements = driver.find_elements(By.CSS_SELECTOR, "svg.bx-close-xsvg")
+            # try:
+            #     # handle_popups(driver)
+            #     # hide_banners(driver)
+            #     # close_elements = driver.find_elements(By.CSS_SELECTOR, "svg.bx-close-xsvg")
                 try:
                     # Check for the presence of the element
                     close_element = driver.find_element(By.CSS_SELECTOR, "svg.bx-close-xsvg")
                     print("Element found. Clicking the element...")
                     actions.move_to_element(close_element).click().perform()
+                    time.sleep(1)
                     # close_element.click()  # Click the element
                 except NoSuchElementException:
                     print("Element not found.")
-                # Check if the element is present
-                # if close_elements:
-                #     # Click the first found close button
-                #     close_elements[0].click()
-                #     print("Close button clicked.")
-                #     # Wait for any potential page changes or animations
-                #     time.sleep(1)  # Adjust the sleep time based on the page behavior
-                # else:
-                #     print("Close button not found.")
                 actions.click(welements[index]).perform()
                 print('element clicked')
-                time.sleep(1)  # Add delay if needed for page actions to complete
+                time.sleep(2)  # Add delay if needed for page actions to complete
                 render = driver.page_source
                 video_file = get_video(index, plays, play_container, render, videos)
-                plays[index]['video_file'] = video_file
+                plays[index]['VIDEO_FILE'] = video_file
                 plays_df = plays_to_df(plays, video_file)
-            except Exception as e:
-                print(f"Error: {e}")
+                # print(plays_df)
+            # except Exception as e:
+            #     print(f"Error: {e}")
             # print(f"Row {index}: Location -> {location}, Size -> {size}")
     plays_df.to_csv('plays.csv')
 
@@ -189,14 +194,15 @@ def get_plays(driver, page):
         f.write(str(play_container))
     
     for play in play_container:
-        play_attr = play.find_all('td', class_='Crom_text__NpR1_')
+        play_attr = play.find_all('td')
+        # play_details = [td.get_text().strip() for td in play_attr if not td.find('svg') and td.get_text().strip()]
         # print(play_attr)
         link = play.find('a', href=True)
         link = link.get('href')
-        play_text = ', '.join(td.get_text(strip=True) for td in play_attr)
+        # play_text = ', '.join(td.get_text().strip() for td in play_attr)
         # print(play_text)
-        play_details = [td.get_text(strip=True) for td in play_attr]
-        print("deatails: ", play_details)
+        play_details = [td.get_text() for td in play_attr]
+        print("details: ", play_details)
         entry = dict(zip(fields, play_details))
         plays.append(entry)
     # print(plays)
@@ -231,18 +237,19 @@ def get_video(index, plays, play_container, page, videos):
             response = requests.get(video_url, stream=True)
             response.raise_for_status()
             # Save the video to a file
-            print('index: ', plays[index])
+            # print('index: ', plays[index])
             video_filename = "".join(str(value).strip() for value in plays[index].values()) + ".mp4"
-            with open(video_filename, "wb") as video_file:
+            cleaned_filename = multiple_replace(video_filename, replacements)
+            with open(cleaned_filename, "wb") as video_file:
                 for chunk in tqdm(response.iter_content(chunk_size=1024)):
                     video_file.write(chunk)
-            print('video_filename', video_filename)
+            print('video_filename', cleaned_filename)
         except Exception as e:
             print(f"Failed to download the video: {e}")
     else:
         print("No source URL found for the video element.")
         video_filename = "default_video.mp4"
-    return video_filename
+    return cleaned_filename
 
 def hide_banners(driver):
     scripts = ["""
