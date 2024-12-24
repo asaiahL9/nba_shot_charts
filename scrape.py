@@ -40,10 +40,10 @@ url = f'https://www.nba.com/stats/events?CFID=&CFPARAMS=&ContextMeasure=FGA&EndP
 
 # print(url)
 # Set up Chrome options
-chrome_options = Options()
+# chrome_options = Options()
 # Uncomment for headless mode
 # chrome_options.add_argument("--headless")
-chrome_options.add_argument("--disable-gpu")  # Optional for headless
+# chrome_options.add_argument("--disable-gpu")  # Optional for headless
 
 # Inject a custom cursor into the webpage
 cursor_script = """
@@ -98,6 +98,11 @@ def move_cursor_to_element(driver, element):
 def get_page():
     # chrome_options.add_argument("--headless")  # Run in headless mode
     # chrome_options.add_argument("--disable-gpu")  # Disable GPU (optional for headless)
+    chrome_options = Options()
+    chrome_options.add_argument("--disable-notifications")  # Disable browser notifications
+    chrome_options.add_argument("--disable-popup-blocking")  # Block pop-ups
+    chrome_options.add_argument("--disable-gpu")  # Optional for headless
+
     driver = webdriver.Chrome(options=chrome_options)
     # Create an ActionChains object
     actions = ActionChains(driver)
@@ -136,7 +141,7 @@ def get_page():
                 try:
                     # Check for the presence of the element
                     close_element = driver.find_element(By.CSS_SELECTOR, "svg.bx-close-xsvg")
-                    print("Element found. Clicking the element...")
+                    print("Close button found. Clicking the element...")
                     actions.move_to_element(close_element).click().perform()
                     time.sleep(1)
                     # close_element.click()  # Click the element
@@ -153,6 +158,7 @@ def get_page():
             # except Exception as e:
             #     print(f"Error: {e}")
             # print(f"Row {index}: Location -> {location}, Size -> {size}")
+    plays_df = plays_df.drop(columns=['VIDEO_FILE'])
     plays_df.to_csv('plays.csv')
 
     with open("page.html", 'w', encoding='utf-8') as f:
@@ -238,12 +244,16 @@ def get_video(index, plays, play_container, page, videos):
             response.raise_for_status()
             # Save the video to a file
             # print('index: ', plays[index])
+            directory = plays[index]["PLAYER"]
+            if not os.path.exists(directory):
+                os.makedirs(directory)
             video_filename = "".join(str(value).strip() for value in plays[index].values()) + ".mp4"
             cleaned_filename = multiple_replace(video_filename, replacements)
-            with open(cleaned_filename, "wb") as video_file:
+            file_path = os.path.join(directory, cleaned_filename)
+            with open(file_path, "wb") as video_file:
                 for chunk in tqdm(response.iter_content(chunk_size=1024)):
                     video_file.write(chunk)
-            print('video_filename', cleaned_filename)
+            print('video path: ', file_path)
         except Exception as e:
             print(f"Failed to download the video: {e}")
     else:

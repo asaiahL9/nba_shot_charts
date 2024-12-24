@@ -69,6 +69,8 @@ def find_chart():
     return chart
 #    <rect fill="#f3f7fd" x="-20" y="-20" width="540" height="510"></rect>
 
+
+
 def get_shots():
     with open('shot_chart.svg', 'r', encoding='utf-8') as f:
         html_content = f.read()
