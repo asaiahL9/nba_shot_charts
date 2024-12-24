@@ -33,17 +33,8 @@ import functools
 class Play:
     # Constructor to initialize attributes
     def __init__(self, player, play_type, made, shot_type, boxscore, vtm, htm, date, period, time_remaining, shot_distance, team, video_id, video_url):
-        self.player = player  # Attribute
-        self.age = age    # Attribute
-
-    # Method to display person's details
-    def introduce(self):
-        print(f"Hi, my name is {self.name} and I am {self.age} years old.")
-
-    # Method to update the age
-    def birthday(self):
-        self.age += 1
-        print(f"Happy Birthday, {self.name}! You are now {self.age}.")
+        self.player = player 
+    
 
 def multiple_replace(text, repl_dict):
     pattern = re.compile("|".join(map(re.escape, repl_dict.keys())))
